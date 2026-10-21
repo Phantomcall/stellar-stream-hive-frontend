@@ -57,6 +57,11 @@ export default function StreamDetailPage({ params }: { params: { id: string } })
   }
 
   const isActive = stream.status === "active" || stream.status === "cliff";
+  // The contract allows cancelling any stream that is not Cancelled or Completed,
+  // including Pending/scheduled ones (sender is refunded in full for unstarted streams).
+  const isCancellable =
+    stream.cancellable &&
+    (stream.status === "active" || stream.status === "cliff" || stream.status === "scheduled");
   const totalTokens = Number(stream.totalAmount) / 10 ** stream.token.decimals;
   const totalSeconds = (stream.endLedger - stream.startLedger) * AVERAGE_LEDGER_SECONDS;
   const ratePerSecond = totalSeconds > 0 ? totalTokens / totalSeconds : 0;
@@ -190,7 +195,7 @@ export default function StreamDetailPage({ params }: { params: { id: string } })
           streamId={stream.id}
           senderAddress={stream.sender}
           connectedAddress={wallet.publicKey}
-          cancellable={stream.cancellable && isActive}
+          cancellable={isCancellable}
           tokenSymbol={stream.token.symbol}
           tokenDecimals={stream.token.decimals}
           onCancelled={refetch}
