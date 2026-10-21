@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { fetchPlatformStats, isApiConfigured } from "@/lib/api";
-import { formatBaseUnits } from "@/lib/format";
 import { Spinner } from "@/components/ui/Spinner";
 import type { PlatformStats } from "@/types";
 
@@ -50,7 +49,18 @@ export function PlatformStats() {
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
       <StatCard label="Streams created" value={stats.totalStreams.toLocaleString()} />
       <StatCard label="Active streams" value={stats.totalActiveStreams.toLocaleString()} />
-      <StatCard label="Total streamed" value={`${formatBaseUnits(BigInt(stats.totalStreamedBaseUnits), 7)} XLM`} />
+      {/*
+       * `total_streamed` from the API (/stats) sums raw base units across ALL
+       * tokens, regardless of their decimal precision or symbol. Formatting it
+       * as 7-decimal XLM would be wrong whenever non-XLM tokens are present.
+       * We display it as plain base units with an honest label so no misleading
+       * token symbol or decimal conversion is applied.
+       * See: stellar-stream-hive-api /stats endpoint docs for the wire format.
+       */}
+      <StatCard
+        label="Total streamed (base units, all tokens)"
+        value={BigInt(stats.totalStreamedBaseUnits).toLocaleString()}
+      />
     </div>
   );
 }
