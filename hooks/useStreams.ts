@@ -40,6 +40,8 @@ export function useStreams(address: string | null, role: StreamRole): UseStreams
       const results = role === "sender" ? await fetchStreamsBySender(address) : await fetchStreamsByRecipient(address);
       setStreams(results);
     } catch (err) {
+      // A failed page (including any page after the first in a paged fetch)
+      // rejects the whole request, so we never keep a partial list around.
       setError(err instanceof Error ? err.message : "Failed to load streams.");
       setStreams([]);
     } finally {
