@@ -53,6 +53,12 @@ describe("filtering", () => {
     expect(countByFilter(all)).toEqual({ all: 5, live: 3, completed: 1, cancelled: 1 });
     expect(countByFilter([])).toEqual({ all: 0, live: 0, completed: 0, cancelled: 0 });
   });
+  it("handles empty input for filterStreams", () => {
+    expect(filterStreams([], "all")).toEqual([]);
+    expect(filterStreams([], "live")).toEqual([]);
+    expect(filterStreams([], "completed")).toEqual([]);
+    expect(filterStreams([], "cancelled")).toEqual([]);
+  });
 });
 
 describe("searchStreams", () => {
@@ -139,6 +145,13 @@ describe("csvCell", () => {
     expect(csvCell("+1")).toBe("'+1");
     expect(csvCell("-1")).toBe("'-1");
     expect(csvCell("@cmd")).toBe("'@cmd");
+  });
+  it("escapes leading whitespace that could trigger formula injection", () => {
+    expect(csvCell("\tvalue")).toBe("'\tvalue");
+    expect(csvCell("\rvalue")).toBe("'\rvalue");
+  });
+  it("handles fields with both quotes and newlines", () => {
+    expect(csvCell('line 1\nsay "hi"\nline 3')).toBe('"line 1\nsay ""hi""\nline 3"');
   });
 });
 

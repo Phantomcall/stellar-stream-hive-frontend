@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   AVERAGE_LEDGER_SECONDS,
   computeProgress,
+  computeRatePerSecond,
   computeStreamedAmount,
   computeWithdrawable,
   dateToEstimatedLedger,
@@ -109,6 +110,22 @@ describe("computeProgress", () => {
 
   it("treats an empty duration as complete", () => {
     expect(computeProgress({ startLedger: 5, endLedger: 5, currentLedger: 0 })).toBe(1);
+  });
+});
+
+describe("computeRatePerSecond", () => {
+  it("returns 0 for zero duration", () => {
+    expect(computeRatePerSecond(1_000_000n, 100, 100)).toBe(0);
+  });
+
+  it("returns 0 for negative duration", () => {
+    expect(computeRatePerSecond(1_000_000n, 200, 100)).toBe(0);
+  });
+
+  it("computes the correct rate for a normal case", () => {
+    // 1_000_000 over 100 ledgers: 100 * 5 seconds = 500 seconds
+    // rate = 1_000_000 / 500 = 2_000 per second
+    expect(computeRatePerSecond(1_000_000n, 0, 100)).toBe(2_000);
   });
 });
 
