@@ -66,3 +66,46 @@ describe("nativeTokenContractId", () => {
     expect(ids.FUTURENET).toBe(FUTURENET_CONTRACT_ID);
   });
 });
+
+describe("nativeTokenContractId", () => {
+  const NATIVE_XLM_CONTRACT_IDS = {
+    TESTNET: "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC",
+    PUBLIC: "CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA",
+    FUTURENET: "CB64D3G7SM2RTH6JSGG34DDTFTQ5CFDKVDZJZSODMCX4NJ2C2E7UXY2L",
+  } as const;
+
+  const setNetwork = (network: "TESTNET" | "PUBLIC" | "FUTURENET") => {
+    vi.stubEnv("NEXT_PUBLIC_STELLAR_NETWORK", network);
+    vi.resetModules();
+  };
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it("returns TESTNET contract id when NETWORK=TESTNET", async () => {
+    setNetwork("TESTNET");
+    const { nativeTokenContractId } = await import("./stellar");
+    expect(nativeTokenContractId()).toBe(NATIVE_XLM_CONTRACT_IDS.TESTNET);
+  });
+
+  it("returns PUBLIC contract id when NETWORK=PUBLIC", async () => {
+    setNetwork("PUBLIC");
+    const { nativeTokenContractId } = await import("./stellar");
+    expect(nativeTokenContractId()).toBe(NATIVE_XLM_CONTRACT_IDS.PUBLIC);
+  });
+
+  it("returns FUTURENET contract id when NETWORK=FUTURENET", async () => {
+    setNetwork("FUTURENET");
+    const { nativeTokenContractId } = await import("./stellar");
+    expect(nativeTokenContractId()).toBe(NATIVE_XLM_CONTRACT_IDS.FUTURENET);
+  });
+
+  it("falls back to TESTNET when network is unset", async () => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+    const { nativeTokenContractId } = await import("./stellar");
+    expect(nativeTokenContractId()).toBe(NATIVE_XLM_CONTRACT_IDS.TESTNET);
+  });
+});

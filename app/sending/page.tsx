@@ -120,7 +120,15 @@ export default function SendingPage() {
                   streamId={stream.id}
                   senderAddress={stream.sender}
                   connectedAddress={wallet.publicKey}
-                  cancellable={stream.cancellable && (stream.status === "active" || stream.status === "cliff")}
+                  cancellable={
+                    stream.cancellable &&
+                    (stream.status === "active" ||
+                      stream.status === "cliff" ||
+                      // The contract allows cancelling any stream that is not
+                      // Cancelled or Completed, including Pending/scheduled ones.
+                      // A scheduled stream that hasn't started refunds the sender in full.
+                      stream.status === "scheduled")
+                  }
                   tokenSymbol={stream.token.symbol}
                   tokenDecimals={stream.token.decimals}
                   onCancelled={refetch}

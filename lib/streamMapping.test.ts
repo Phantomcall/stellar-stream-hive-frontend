@@ -98,6 +98,16 @@ describe("mapApiStatus", () => {
   it("never reports 'cliff' for a stream without one", () => {
     expect(mapApiStatus({ status: "active", start_ledger: 900, cliff_ledger: 900 }, 901)).toBe("active");
   });
+  it("passes completed through regardless of current ledger", () => {
+    expect(mapApiStatus({ ...v, status: "completed" }, 800)).toBe("completed");
+    expect(mapApiStatus({ ...v, status: "completed" }, 950)).toBe("completed");
+    expect(mapApiStatus({ ...v, status: "completed" }, 1_500)).toBe("completed");
+  });
+  it("passes cancelled through regardless of current ledger, even with a future cliff", () => {
+    expect(mapApiStatus({ ...v, status: "cancelled" }, 900)).toBe("cancelled");
+    expect(mapApiStatus({ ...v, status: "cancelled" }, 930)).toBe("cancelled");
+    expect(mapApiStatus({ ...v, status: "cancelled" }, 960)).toBe("cancelled");
+  });
 });
 
 describe("mapApiStats", () => {

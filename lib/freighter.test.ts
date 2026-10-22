@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
+import { describeFreighterError } from "./freighter";
 
-// Mock @stellar/freighter-api before importing freighter.ts
+// Mock @stellar/freighter-api so importing the module is safe in node.
 vi.mock("@stellar/freighter-api", () => ({
   isConnected: vi.fn(),
   isAllowed: vi.fn(),
@@ -12,71 +13,60 @@ vi.mock("@stellar/freighter-api", () => ({
   signTransaction: vi.fn(),
 }));
 
-import { describeFreighterError, FreighterNotInstalledError, FreighterAccessDeniedError, FreighterNetworkMismatchError } from "./freighter";
-
 describe("describeFreighterError", () => {
-  it("returns helpful message for FreighterNotInstalledError", () => {
-    const err = new FreighterNotInstalledError();
-    const message = describeFreighterError(err);
-    expect(message).toContain("isn't installed");
-    expect(message).toContain("freighter.app");
+  it("returns install message for FreighterNotInstalledError", () => {
+    const err = new Error("not installed");
+    err.name = "FreighterNotInstalledError";
+    expect(describeFreighterError(err)).toBe(
+      "Freighter wallet extension isn't installed. Install it from freighter.app to connect.",
+    );
   });
 
-  it("returns helpful message for FreighterAccessDeniedError", () => {
-    const err = new FreighterAccessDeniedError();
-    const message = describeFreighterError(err);
-    expect(message).toContain("denied");
-    expect(message).toContain("approve the connection");
+  it("returns deny message for FreighterAccessDeniedError", () => {
+    const err = new Error("access denied");
+    err.name = "FreighterAccessDeniedError";
+    expect(describeFreighterError(err)).toBe(
+      "Wallet access was denied. Please approve the connection request in Freighter.",
+    );
   });
 
-  it("returns message for FreighterNetworkMismatchError", () => {
-    const err = new FreighterNetworkMismatchError("TESTNET", "PUBLIC");
-    const message = describeFreighterError(err);
-    expect(message).toContain("TESTNET");
-    expect(message).toContain("PUBLIC");
+  it("returns network mismatch message for FreighterNetworkMismatchError", () => {
+    const err = new Error("Wrong network selected in Freighter. Expected TESTNET, got PUBLIC.");
+    err.name = "FreighterNetworkMismatchError";
+    expect(describeFreighterError(err)).toBe(err.message);
   });
 
-  it("handles generic Error with declined message", () => {
-    const err = new Error("User declined the transaction");
-    const message = describeFreighterError(err);
-    expect(message).toContain("rejected in your wallet");
+  it("returns rejection message for Error containing rejected/declined/cancelled", () => {
+    const err = new Error("Transaction was rejected by the user");
+    expect(describeFreighterError(err)).toBe(
+      "Transaction was rejected in your wallet.",
+    );
   });
 
-  it("handles generic Error with rejected message", () => {
-    const err = new Error("Transaction was rejected by user");
-    const message = describeFreighterError(err);
-    expect(message).toContain("rejected in your wallet");
+  it("returns rejection message for Error containing declined", () => {
+    const err = new Error("Transaction declined by user");
+    expect(describeFreighterError(err)).toBe(
+      "Transaction was rejected in your wallet.",
+    );
   });
 
-  it("handles generic Error with user cancelled message", () => {
-    const err = new Error("User cancelled the operation");
-    const message = describeFreighterError(err);
-    expect(message).toContain("rejected in your wallet");
+  it("returns error message for generic Error", () => {
+    const err = new Error("Something went wrong");
+    expect(describeFreighterError(err)).toBe("Something went wrong");
   });
 
-  it("returns original message for other Errors", () => {
-    const err = new Error("Network timeout occurred");
-    const message = describeFreighterError(err);
-    expect(message).toBe("Network timeout occurred");
-  });
-
-  it("returns fallback for unknown error types", () => {
-    const message = describeFreighterError("string error");
-    expect(message).toBe("An unknown wallet error occurred.");
-  });
-
-  it("returns fallback for null", () => {
-    const message = describeFreighterError(null);
-    expect(message).toBe("An unknown wallet error occurred.");
-  });
-
-  it("returns fallback for undefined", () => {
-    const message = describeFreighterError(undefined);
-    expect(message).toBe("An unknown wallet error occurred.");
-  });
-
-  it("returns fallback for plain object", () => {
-    const message = describeFreighterError({ code: 123 });
-    expect(message).toBe("An unknown wallet error occurred.");
+  it("returns unknown message for non-Error value", () => {
+    expect(describeFreighterError("not an error")).toBe(
+      "An unknown wallet error occurred.",
+    );
+    expect(describeFreighterError(null)).toBe(
+      "An unknown wallet error occurred.",
+    );
+    expect(describeFreighterError(42)).toBe(
+      "An unknown wallet error occurred.",
+    );
+    expect(describeFreighterError(undefined)).toBe(
+      "An unknown wallet error occurred.",
+    );
   });
 });

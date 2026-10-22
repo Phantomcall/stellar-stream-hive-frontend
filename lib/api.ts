@@ -86,18 +86,26 @@ export async function fetchPlatformStats(): Promise<PlatformStats | null> {
 /**
  * Walks a paginated list endpoint until the server's `X-Total-Count` is
  * exhausted (or a short page is returned), concatenating the pages.
+ *
+ * The first page failing (or the API being unconfigured) yields an empty
+ * list so callers can show a graceful empty state. A failure on any later
+ * page throws instead of returning a silently partial list.
  */
 async function fetchAllPages(path: string): Promise<ApiStreamView[]> {
   const all: ApiStreamView[] = [];
   for (let page = 0; page < MAX_PAGES; page++) {
     const res = await apiFetchResponse(`${path}?limit=${PAGE_SIZE}&offset=${page * PAGE_SIZE}`);
-    if (!res) break;
+    if (!res) {
+      if (page === 0) break;
+      throw new Error(`Failed to load page ${page + 1} of ${path}`);
+    }
 
     let batch: ApiStreamView[];
     try {
       batch = (await res.json()) as ApiStreamView[];
     } catch {
-      break;
+      if (page === 0) break;
+      throw new Error(`Failed to load page ${page + 1} of ${path}`);
     }
     all.push(...batch);
 

@@ -60,6 +60,32 @@ describe("fetchStreamsBySender pagination", () => {
     expect(String(listCalls[1][0])).toContain("limit=200&offset=200");
   });
 
+  it("rejects instead of returning a partial list when a later page fails", async () => {
+    const page1 = Array.from({ length: 200 }, (_, i) => makeView(`s${i}`));
+    const total = 250;
+
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      const offset = Number(url.searchParams.get("offset"));
+      if (offset === 0) return jsonResponse(page1, total);
+      if (offset === 200) {
+        return new Response(JSON.stringify({ error: "boom" }), {
+          status: 500,
+          headers: { "content-type": "application/json" },
+        });
+      }
+      throw new Error(`unexpected offset ${offset}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(fetchStreamsBySender("GSENDER")).rejects.toThrow();
+
+    const listCalls = fetchMock.mock.calls.filter(([input]) => String(input).includes("/senders/"));
+    expect(listCalls).toHaveLength(2);
+    expect(String(listCalls[0][0])).toContain("limit=200&offset=0");
+    expect(String(listCalls[1][0])).toContain("limit=200&offset=200");
+  });
+
   it("stops on a short page even without X-Total-Count", async () => {
     const page1 = Array.from({ length: 200 }, (_, i) => makeView(`s${i}`));
     const page2 = Array.from({ length: 10 }, (_, i) => makeView(`s${200 + i}`));
