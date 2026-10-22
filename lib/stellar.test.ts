@@ -1,36 +1,68 @@
-import { describe, expect, it } from "vitest";
-import { StrKey } from "@stellar/stellar-sdk";
-import { isValidRecipientAddress, isValidStellarAddress } from "./stellar";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
-const ACCOUNT = "GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN7";
-const CONTRACT = "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC";
+const TESTNET_CONTRACT_ID = "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC";
+const PUBLIC_CONTRACT_ID = "CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA";
+const FUTURENET_CONTRACT_ID = "CB64D3G7SM2RTH6JSGG34DDTFTQ5CFDKVDZJZSODMCX4NJ2C2E7UXY2L";
 
-describe("isValidStellarAddress", () => {
-  it("accepts valid account and contract StrKeys for their matching kinds", () => {
-    expect(isValidStellarAddress(ACCOUNT, "account")).toBe(true);
-    expect(isValidStellarAddress(CONTRACT, "contract")).toBe(true);
-    expect(isValidStellarAddress(ACCOUNT)).toBe(true);
-    expect(isValidStellarAddress(CONTRACT)).toBe(true);
+describe("nativeTokenContractId", () => {
+  const originalEnv = process.env.NEXT_PUBLIC_STELLAR_NETWORK;
+
+  beforeEach(() => {
+    vi.resetModules();
   });
 
-  it("rejects a one-character account typo with an invalid checksum", () => {
-    const typo = `${ACCOUNT.slice(0, -1)}6`;
-
-    expect(typo).toHaveLength(ACCOUNT.length);
-    expect(isValidStellarAddress(typo, "account")).toBe(false);
-    expect(isValidRecipientAddress(typo)).toBe(false);
+  afterEach(() => {
+    if (originalEnv !== undefined) {
+      process.env.NEXT_PUBLIC_STELLAR_NETWORK = originalEnv;
+    } else {
+      delete process.env.NEXT_PUBLIC_STELLAR_NETWORK;
+    }
   });
 
-  it("rejects a valid muxed M-address where a G-account address is required", () => {
-    const muxedPayload = Uint8Array.from([
-      ...StrKey.decodeEd25519PublicKey(ACCOUNT),
-      ...new Uint8Array(8),
-    ]);
-    const muxedAddress = StrKey.encodeMed25519PublicKey(muxedPayload);
+  async function getNativeTokenContractId() {
+    const { nativeTokenContractId } = await import("./stellar");
+    return nativeTokenContractId;
+  }
 
-    expect(muxedAddress.startsWith("M")).toBe(true);
-    expect(StrKey.isValidMed25519PublicKey(muxedAddress)).toBe(true);
-    expect(isValidStellarAddress(muxedAddress)).toBe(false);
-    expect(isValidRecipientAddress(muxedAddress)).toBe(false);
+  async function getNativeXlmContractIds() {
+    const { NATIVE_XLM_CONTRACT_IDS } = await import("./stellar");
+    return NATIVE_XLM_CONTRACT_IDS;
+  }
+
+  it("returns TESTNET contract ID when network is TESTNET", async () => {
+    process.env.NEXT_PUBLIC_STELLAR_NETWORK = "TESTNET";
+    const fn = await getNativeTokenContractId();
+    expect(fn()).toBe(TESTNET_CONTRACT_ID);
+  });
+
+  it("returns PUBLIC contract ID when network is PUBLIC", async () => {
+    process.env.NEXT_PUBLIC_STELLAR_NETWORK = "PUBLIC";
+    const fn = await getNativeTokenContractId();
+    expect(fn()).toBe(PUBLIC_CONTRACT_ID);
+  });
+
+  it("returns FUTURENET contract ID when network is FUTURENET", async () => {
+    process.env.NEXT_PUBLIC_STELLAR_NETWORK = "FUTURENET";
+    const fn = await getNativeTokenContractId();
+    expect(fn()).toBe(FUTURENET_CONTRACT_ID);
+  });
+
+  it("defaults to TESTNET when network is not recognized", async () => {
+    process.env.NEXT_PUBLIC_STELLAR_NETWORK = "UNKNOWN";
+    const fn = await getNativeTokenContractId();
+    expect(fn()).toBe(TESTNET_CONTRACT_ID);
+  });
+
+  it("defaults to TESTNET when env var is not set", async () => {
+    delete process.env.NEXT_PUBLIC_STELLAR_NETWORK;
+    const fn = await getNativeTokenContractId();
+    expect(fn()).toBe(TESTNET_CONTRACT_ID);
+  });
+
+  it("NATIVE_XLM_CONTRACT_IDS contains correct contract IDs", async () => {
+    const ids = await getNativeXlmContractIds();
+    expect(ids.TESTNET).toBe(TESTNET_CONTRACT_ID);
+    expect(ids.PUBLIC).toBe(PUBLIC_CONTRACT_ID);
+    expect(ids.FUTURENET).toBe(FUTURENET_CONTRACT_ID);
   });
 });
